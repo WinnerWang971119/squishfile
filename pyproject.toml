@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "squishfile"
+version = "0.1.0"
+description = "Local file compressor with smart ML-predicted compression"
+requires-python = ">=3.10"
+dependencies = [
+    "fastapi>=0.104.0",
+    "uvicorn[standard]>=0.24.0",
+    "pillow>=10.0.0",
+    "pymupdf>=1.23.0",
+    "scikit-learn>=1.3.0",
+    "python-magic-bin>=0.4.14",
+    "python-multipart>=0.0.6",
+    "numpy>=1.24.0",
+    "joblib>=1.3.0",
+]
+
+[project.scripts]
+squishfile = "squishfile.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["squishfile*"]
+
+[tool.setuptools.package-data]
+squishfile = ["models/*.pkl", "frontend/dist/**/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
