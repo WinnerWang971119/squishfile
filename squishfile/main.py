@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from squishfile import __version__
 from squishfile.routes.upload import router as upload_router
+from squishfile.routes.compress import router as compress_router
 
 app = FastAPI(title="SquishFile", version=__version__)
 
@@ -14,6 +15,7 @@ app.add_middleware(
 )
 
 app.include_router(upload_router)
+app.include_router(compress_router)
 
 
 @app.get("/api/health")
