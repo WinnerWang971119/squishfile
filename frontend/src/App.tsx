@@ -49,10 +49,11 @@ export default function App() {
                   ...f,
                   id: realId,
                   mime: uploaded.mime,
-                  category: uploaded.category as "image" | "pdf",
+                  category: uploaded.category as "image" | "pdf" | "video" | "audio",
                   size: uploaded.size,
                   width: uploaded.width,
                   height: uploaded.height,
+                  duration: uploaded.duration,
                   status: "queued" as const,
                   progress: 0,
                 }
@@ -191,6 +192,7 @@ export default function App() {
               targetKb={targetKb}
               maxKb={maxKb}
               onTargetChange={setTargetKb}
+              hasVideo={files.some((f) => f.category === "video" || f.category === "audio")}
             />
           )}
 

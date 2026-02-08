@@ -11,6 +11,12 @@ function formatSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+function formatDuration(seconds: number): string {
+  const m = Math.floor(seconds / 60);
+  const s = Math.floor(seconds % 60);
+  return `${m}:${s.toString().padStart(2, "0")}`;
+}
+
 export function FileCard({ file }: FileCardProps) {
   const isCompressing = file.status === "compressing";
   const isDone = file.status === "done";
@@ -35,6 +41,9 @@ export function FileCard({ file }: FileCardProps) {
 
       <div className="text-xs text-[#888] mb-2">
         {formatSize(file.size)}
+        {file.duration != null && (
+          <span className="ml-2 text-[#666]">{formatDuration(file.duration)}</span>
+        )}
         {file.compressedSize != null && (
           <>
             <span className="text-[#FFD60A] mx-1">&rarr;</span>

@@ -3,6 +3,7 @@ import io
 from fastapi import APIRouter, UploadFile, HTTPException
 from PIL import Image
 from squishfile.detector import detect_file_type
+from squishfile.compressor.ffmpeg_utils import probe_media
 
 router = APIRouter(prefix="/api")
 
@@ -13,9 +14,6 @@ file_store: dict[str, dict] = {}
 @router.post("/upload")
 async def upload_file(file: UploadFile):
     data = await file.read()
-
-    if len(data) > 100 * 1024 * 1024:  # 100MB limit
-        raise HTTPException(status_code=400, detail="File exceeds 100MB limit")
 
     info = detect_file_type(data, file.filename or "unknown")
 
@@ -37,6 +35,12 @@ async def upload_file(file: UploadFile):
         img = Image.open(io.BytesIO(data))
         entry["width"] = img.width
         entry["height"] = img.height
+
+    # Extract media duration for video/audio
+    if info["category"] in ("video", "audio"):
+        probe = probe_media(data)
+        if probe and "format" in probe:
+            entry["duration"] = float(probe["format"].get("duration", 0))
 
     file_store[file_id] = entry
 

@@ -40,3 +40,38 @@ def test_compress_file_skip_small():
         target_size=10000,
     )
     assert result["skipped"] is True
+
+
+def test_compress_file_unsupported_returns_skipped():
+    result = compress_file(
+        data=b"random data",
+        mime="application/octet-stream",
+        category="unsupported",
+        target_size=1000,
+    )
+    assert result["skipped"] is True
+
+
+def test_compress_file_video_dispatch():
+    """Engine should accept category='video' without error."""
+    tiny_data = b"\x00" * 100
+    result = compress_file(
+        data=tiny_data,
+        mime="video/mp4",
+        category="video",
+        target_size=10000,
+    )
+    # Small data should be skipped (under target)
+    assert result["skipped"] is True
+
+
+def test_compress_file_audio_dispatch():
+    """Engine should accept category='audio' without error."""
+    tiny_data = b"\x00" * 100
+    result = compress_file(
+        data=tiny_data,
+        mime="audio/mpeg",
+        category="audio",
+        target_size=10000,
+    )
+    assert result["skipped"] is True

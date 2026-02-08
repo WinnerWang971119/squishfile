@@ -1,4 +1,5 @@
 import os
+import logging
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -7,8 +8,17 @@ from fastapi.responses import FileResponse
 from squishfile import __version__
 from squishfile.routes.upload import router as upload_router
 from squishfile.routes.compress import router as compress_router
+from squishfile.compressor.ffmpeg_utils import check_ffmpeg
+
+logger = logging.getLogger(__name__)
 
 app = FastAPI(title="SquishFile", version=__version__)
+
+if not check_ffmpeg():
+    logger.warning(
+        "FFmpeg not available. Video and audio compression will not work. "
+        "Try reinstalling: pip install imageio-ffmpeg"
+    )
 
 app.add_middleware(
     CORSMiddleware,

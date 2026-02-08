@@ -1,5 +1,6 @@
 # squishfile/routes/compress.py
 import io
+import os
 import zipfile
 from urllib.parse import quote
 
@@ -37,6 +38,13 @@ async def compress(req: CompressRequest):
     # Store compressed data
     entry["compressed_data"] = result["data"]
     entry["compressed_size"] = result["size"]
+
+    # Update filename/mime if output format changed (e.g. webm -> mp4)
+    if "output_ext" in result and not result.get("skipped"):
+        old_name = entry["original_filename"]
+        stem, _ = os.path.splitext(old_name)
+        entry["original_filename"] = stem + result["output_ext"]
+        entry["mime"] = result["output_mime"]
 
     return {
         "file_id": req.file_id,

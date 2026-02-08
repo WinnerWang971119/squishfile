@@ -1,6 +1,8 @@
 # squishfile/compressor/engine.py
 from squishfile.compressor.image import compress_image
 from squishfile.compressor.pdf import compress_pdf
+from squishfile.compressor.video import compress_video
+from squishfile.compressor.audio import compress_audio
 from squishfile.compressor.predictor import predict_quality
 
 
@@ -37,6 +39,10 @@ def compress_file(
         result = compress_image(data, mime, target_size)
     elif category == "pdf":
         result = compress_pdf(data, target_size)
+    elif category == "video":
+        result = compress_video(data, mime, target_size)
+    elif category == "audio":
+        result = compress_audio(data, mime, target_size)
     else:
         return {
             "data": data,
