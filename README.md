@@ -4,39 +4,20 @@ A full-stack file compression app with ML-based quality prediction. Upload image
 
 **Supported formats:** JPEG, PNG, WebP, GIF, PDF, MP4, AVI, MOV, MKV, MP3, WAV, FLAC, AAC, OGG
 
-## Quick Start
+## Installation
+
+### Option A: pip install (Python users)
 
 ```bash
-# Install
-pip install -e .
-
-# Run (auto-opens browser on port 8000-8100)
+pip install squishfile
 squishfile
 ```
 
-That's it. Upload files, set your target size, and download the compressed output.
+### Option B: Download EXE (Windows)
 
----
-
-## Detailed Guide
-
-### Prerequisites
-
-- Python 3.10+
-- Node.js 18+ (only needed for frontend development)
-
-### Installation
-
-```bash
-# Clone the repo
-git clone https://github.com/your-username/squishfile.git
-cd squishfile
-
-# Install the Python package
-pip install -e .
-```
-
-The frontend comes pre-built and bundled with the Python package. No separate frontend build step is needed for normal use.
+1. Go to [Releases](https://github.com/WinnerWang971119/filecompresser/releases)
+2. Download `SquishFile.exe`
+3. Double-click to run — opens your browser automatically
 
 ### Usage
 
