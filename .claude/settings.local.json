@@ -20,7 +20,12 @@
       "Bash(git check-ignore:*)",
       "Bash(echo:*)",
       "Bash(git worktree:*)",
-      "Bash(choco install:*)"
+      "Bash(choco install:*)",
+      "Bash(git checkout:*)",
+      "Bash(git merge:*)",
+      "Bash(git stash:*)",
+      "Bash(git push:*)",
+      "Bash(where:*)"
     ]
   }
 }
