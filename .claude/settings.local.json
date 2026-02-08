@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:pypi.org)",
+      "WebSearch",
+      "Bash(pip index:*)",
+      "Bash(pip install:*)",
+      "Bash(python:*)",
+      "Bash(pip show:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nchore: initialize project structure with pyproject.toml and CLI entry point\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(npm create:*)",
+      "Bash(npm install:*)",
+      "Bash(npm run build:*)",
+      "Bash(xcopy:*)",
+      "Bash(if not exist \"C:\\\\Users\\\\wangd\\\\文件\\\\filecompresser\\\\squishfile\\\\frontend\\\\dist\" mkdir \"C:\\\\Users\\\\wangd\\\\文件\\\\filecompresser\\\\squishfile\\\\frontend\\\\dist\")",
+      "Bash(pytest:*)",
+      "Bash(npx tsc:*)",
+      "Bash(git check-ignore:*)",
+      "Bash(echo:*)",
+      "Bash(git worktree:*)",
+      "Bash(choco install:*)"
+    ]
+  }
+}

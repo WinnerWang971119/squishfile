@@ -1,5 +1,9 @@
 # squishfile/routes/compress.py
-from fastapi import APIRouter, HTTPException
+import io
+import zipfile
+from urllib.parse import quote
+
+from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import Response
 from pydantic import BaseModel
 from squishfile.routes.upload import file_store
@@ -52,8 +56,42 @@ async def download(file_id: str):
     data = entry.get("compressed_data", entry["data"])
     filename = entry["original_filename"]
 
+    ascii_filename = filename.encode("ascii", errors="replace").decode("ascii")
+    encoded_filename = quote(filename)
+
     return Response(
         content=data,
         media_type="application/octet-stream",
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        headers={
+            "Content-Disposition": (
+                f'attachment; filename="{ascii_filename}"; '
+                f"filename*=UTF-8''{encoded_filename}"
+            )
+        },
+    )
+
+
+@router.get("/download-all")
+async def download_all(ids: str = Query(..., description="Comma-separated file IDs")):
+    file_ids = [fid.strip() for fid in ids.split(",") if fid.strip()]
+    if not file_ids:
+        raise HTTPException(status_code=400, detail="No file IDs provided")
+
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        for file_id in file_ids:
+            entry = file_store.get(file_id)
+            if not entry:
+                continue
+            data = entry.get("compressed_data", entry["data"])
+            filename = entry["original_filename"]
+            zf.writestr(filename, data)
+
+    buf.seek(0)
+    return Response(
+        content=buf.getvalue(),
+        media_type="application/zip",
+        headers={
+            "Content-Disposition": 'attachment; filename="squishfile-compressed.zip"'
+        },
     )
