@@ -1,5 +1,6 @@
 """Video compression using FFmpeg two-pass encoding (via imageio-ffmpeg)."""
 import os
+import shutil
 import subprocess
 import tempfile
 
@@ -54,11 +55,12 @@ def compress_video(data: bytes, mime: str, target_size: int) -> dict:
     if video_bitrate <= 0:
         video_bitrate = MIN_BITRATE_KBPS * 1000
 
-    video_bitrate_kbps = max(MIN_BITRATE_KBPS, video_bitrate // 1000)
+    video_bitrate_raw_kbps = video_bitrate // 1000
+    video_bitrate_kbps = max(MIN_BITRATE_KBPS, video_bitrate_raw_kbps)
 
-    # Determine if we need to scale down
+    # Determine if we need to scale down based on unclamped bitrate
     scale_filter = None
-    if video_bitrate_kbps < MIN_BITRATE_KBPS:
+    if video_bitrate_raw_kbps < MIN_BITRATE_KBPS:
         # Find the video stream resolution
         for stream in info.get("streams", []):
             if stream.get("codec_type") == "video":
@@ -73,7 +75,8 @@ def compress_video(data: bytes, mime: str, target_size: int) -> dict:
     ext = _ext_for_mime(mime)
     in_fd, in_path = tempfile.mkstemp(suffix=ext)
     out_fd, out_path = tempfile.mkstemp(suffix=".mp4")
-    passlog_prefix = tempfile.mktemp(prefix="ffmpeg2pass_")
+    passlog_dir = tempfile.mkdtemp(prefix="ffmpeg2pass_")
+    passlog_prefix = os.path.join(passlog_dir, "passlog")
 
     try:
         os.write(in_fd, data)
@@ -128,6 +131,8 @@ def compress_video(data: bytes, mime: str, target_size: int) -> dict:
             "data": compressed,
             "size": len(compressed),
             "skipped": False,
+            "output_mime": "video/mp4",
+            "output_ext": ".mp4",
         }
     except subprocess.TimeoutExpired:
         return {"data": data, "size": original_size, "skipped": True,
@@ -136,11 +141,9 @@ def compress_video(data: bytes, mime: str, target_size: int) -> dict:
         for p in (in_path, out_path):
             if os.path.exists(p):
                 os.unlink(p)
-        # Clean up pass log files
-        for suffix in ("-0.log", "-0.log.mbtree"):
-            log_path = passlog_prefix + suffix
-            if os.path.exists(log_path):
-                os.unlink(log_path)
+        # Clean up pass log directory
+        if os.path.exists(passlog_dir):
+            shutil.rmtree(passlog_dir, ignore_errors=True)
 
 
 def _ext_for_mime(mime: str) -> str:

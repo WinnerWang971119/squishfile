@@ -1,6 +1,5 @@
 """Tests for audio compression via FFmpeg."""
 import struct
-import pytest
 from squishfile.compressor.audio import compress_audio
 
 

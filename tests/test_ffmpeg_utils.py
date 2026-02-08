@@ -1,5 +1,4 @@
 """Tests for FFmpeg utility functions."""
-import pytest
 from squishfile.compressor.ffmpeg_utils import check_ffmpeg, get_ffmpeg, get_ffprobe, probe_media
 
 

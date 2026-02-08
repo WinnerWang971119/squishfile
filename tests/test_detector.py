@@ -37,7 +37,7 @@ def test_detect_mp3():
     """MP3 files start with ID3 tag or sync bytes."""
     # ID3v2 header
     id3 = b'ID3' + b'\x04\x00\x00' + b'\x00\x00\x00\x00' + b'\x00' * 100
-    result = detect_file_type(id3, "song.mp3")
+    detect_file_type(id3, "song.mp3")
     # python-magic may detect as audio/mpeg or application/octet-stream
     # depending on header completeness — test the category mapping exists
     from squishfile.detector import SUPPORTED_AUDIO

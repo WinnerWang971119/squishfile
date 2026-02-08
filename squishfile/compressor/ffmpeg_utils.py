@@ -12,7 +12,7 @@ def get_ffmpeg() -> str:
     return imageio_ffmpeg.get_ffmpeg_exe()
 
 
-def get_ffprobe() -> str:
+def get_ffprobe() -> str | None:
     """Return path to the FFprobe binary (derived from FFmpeg location).
 
     imageio-ffmpeg only bundles ffmpeg, not ffprobe. However, the static

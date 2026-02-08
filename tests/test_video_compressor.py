@@ -2,7 +2,6 @@
 import subprocess
 import tempfile
 import os
-import pytest
 from squishfile.compressor.video import compress_video
 
 

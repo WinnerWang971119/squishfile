@@ -67,6 +67,8 @@ def compress_audio(data: bytes, mime: str, target_size: int) -> dict:
             "data": compressed,
             "size": len(compressed),
             "skipped": False,
+            "output_mime": "audio/mpeg",
+            "output_ext": ".mp3",
         }
     except subprocess.TimeoutExpired:
         return {"data": data, "size": original_size, "skipped": True,
