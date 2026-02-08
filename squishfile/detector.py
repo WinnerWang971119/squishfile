@@ -14,7 +14,19 @@ SUPPORTED_PDFS = {
     "application/pdf": ".pdf",
 }
 
-SUPPORTED = {**SUPPORTED_IMAGES, **SUPPORTED_PDFS}
+SUPPORTED_VIDEOS = {
+    "video/mp4": ".mp4",
+    "video/webm": ".webm",
+    "video/quicktime": ".mov",
+}
+
+SUPPORTED_AUDIO = {
+    "audio/mpeg": ".mp3",
+    "audio/wav": ".wav",
+    "audio/x-wav": ".wav",
+}
+
+SUPPORTED = {**SUPPORTED_IMAGES, **SUPPORTED_PDFS, **SUPPORTED_VIDEOS, **SUPPORTED_AUDIO}
 
 
 def detect_file_type(data: bytes, filename: str) -> dict:
@@ -33,6 +45,10 @@ def detect_file_type(data: bytes, filename: str) -> dict:
         category = "image"
     elif mime in SUPPORTED_PDFS:
         category = "pdf"
+    elif mime in SUPPORTED_VIDEOS:
+        category = "video"
+    elif mime in SUPPORTED_AUDIO:
+        category = "audio"
     else:
         category = "unsupported"
 

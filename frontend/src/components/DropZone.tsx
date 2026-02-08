@@ -36,7 +36,7 @@ export function DropZone({ onFiles }: DropZoneProps) {
     const input = document.createElement("input");
     input.type = "file";
     input.multiple = true;
-    input.accept = "image/*,.pdf";
+    input.accept = "image/*,.pdf,video/mp4,video/webm,video/quicktime,audio/mpeg,audio/wav";
     input.onchange = (e) => {
       const files = Array.from((e.target as HTMLInputElement).files || []);
       if (files.length > 0) onFiles(files);
@@ -93,7 +93,7 @@ export function DropZone({ onFiles }: DropZoneProps) {
         </div>
 
         <div className="flex gap-2 mt-1">
-          {["JPEG", "PNG", "WebP", "GIF", "PDF"].map((fmt) => (
+          {["JPEG", "PNG", "WebP", "GIF", "PDF", "MP4", "MP3"].map((fmt) => (
             <span
               key={fmt}
               className="px-2 py-0.5 text-[10px] font-[family-name:var(--font-display)] tracking-wider rounded bg-[#1C1C1F] text-[#52525B]"

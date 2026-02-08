@@ -12,9 +12,10 @@ interface CompressPageProps {
   targetKb: number;
   maxKb: number;
   onTargetChange: (kb: number) => void;
+  hasVideo?: boolean;
 }
 
-export function CompressPage({ files, targetKb, maxKb, onTargetChange }: CompressPageProps) {
+export function CompressPage({ files, targetKb, maxKb, onTargetChange, hasVideo }: CompressPageProps) {
   const targetBytes = targetKb * 1024;
 
   return (
@@ -25,6 +26,7 @@ export function CompressPage({ files, targetKb, maxKb, onTargetChange }: Compres
           maxSizeKb={maxKb}
           value={targetKb}
           onChange={onTargetChange}
+          hasVideo={hasVideo}
         />
       </div>
 

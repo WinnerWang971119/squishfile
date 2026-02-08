@@ -4,10 +4,11 @@ export interface FileEntry {
   id: string;
   originalFilename: string;
   mime: string;
-  category: "image" | "pdf";
+  category: "image" | "pdf" | "video" | "audio";
   size: number;
   width?: number;
   height?: number;
+  duration?: number;
   status: FileStatus;
   progress: number;
   compressedSize?: number;
@@ -22,6 +23,7 @@ export interface UploadResponse {
   size: number;
   width?: number;
   height?: number;
+  duration?: number;
   original_filename: string;
 }
 

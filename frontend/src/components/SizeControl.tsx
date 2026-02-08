@@ -4,6 +4,7 @@ interface SizeControlProps {
   maxSizeKb: number;
   value: number;
   onChange: (kb: number) => void;
+  hasVideo?: boolean;
 }
 
 const PRESETS = [
@@ -14,12 +15,21 @@ const PRESETS = [
   { label: "200 KB", kb: 200 },
 ];
 
+const VIDEO_PRESETS = [
+  { label: "50%", factor: 0.5 },
+  { label: "25%", factor: 0.25 },
+  { label: "50 MB", kb: 51200 },
+  { label: "25 MB", kb: 25600 },
+  { label: "10 MB", kb: 10240 },
+];
+
 function formatKb(kb: number): string {
   return kb >= 1024 ? `${(kb / 1024).toFixed(1)} MB` : `${kb} KB`;
 }
 
-export function SizeControl({ maxSizeKb, value, onChange }: SizeControlProps) {
+export function SizeControl({ maxSizeKb, value, onChange, hasVideo = false }: SizeControlProps) {
   const [customInput, setCustomInput] = useState("");
+  const presets = hasVideo ? VIDEO_PRESETS : PRESETS;
 
   const handlePreset = (preset: (typeof PRESETS)[number]) => {
     const kb = preset.kb ?? Math.round(maxSizeKb * (preset as { factor: number }).factor);
@@ -64,7 +74,7 @@ export function SizeControl({ maxSizeKb, value, onChange }: SizeControlProps) {
 
       {/* Presets */}
       <div className="flex flex-wrap gap-2 justify-center">
-        {PRESETS.map((preset) => {
+        {presets.map((preset) => {
           const presetKb = preset.kb ?? Math.round(maxSizeKb * (preset as { factor: number }).factor);
           const isActive = Math.abs(value - presetKb) < 5;
           return (
