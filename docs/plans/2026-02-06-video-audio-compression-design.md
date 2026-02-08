@@ -2,13 +2,13 @@
 
 ## Summary
 
-Add video (MP4, WebM, MOV) and audio (MP3, WAV) compression to SquishFile using FFmpeg as the compression backend.
+Add video (MP4, WebM, MOV) and audio (MP3, WAV) compression to SquishFile using FFmpeg as the compression backend, bundled via `imageio-ffmpeg` (no system install required).
 
 ## Decisions
 
 - **Video formats:** MP4, WebM, MOV (common web formats)
 - **Audio formats:** MP3, WAV (minimal scope)
-- **Compression backend:** FFmpeg (system dependency, called directly via subprocess)
+- **Compression backend:** FFmpeg bundled via `imageio-ffmpeg` pip package (no system dependency)
 - **Video strategy:** Two-pass encoding with calculated bitrate for accurate size targeting
 - **Audio strategy:** Single-pass MP3 encoding with calculated bitrate
 
@@ -33,7 +33,7 @@ Function: `compress_video(data, mime, target_size) -> dict`
 
 Strategy:
 1. Write input bytes to temp file
-2. Probe with `ffmpeg -i` to get duration, resolution, audio bitrate
+2. Probe with `ffprobe` (from imageio-ffmpeg) to get duration, resolution, audio bitrate
 3. Calculate target video bitrate: `(target_size * 8) / duration - audio_bitrate`
 4. If bitrate < 100kbps, downscale resolution (720p -> 480p -> 360p)
 5. Two-pass FFmpeg encoding:
@@ -83,9 +83,11 @@ No ML predictor changes (predictor is image-only, used for logging).
 
 ## FFmpeg Dependency
 
-- Required as system dependency (must be in PATH)
-- Add startup check that logs warning if FFmpeg not found
-- Document installation instructions
+- **No system install required.** FFmpeg is bundled via `imageio-ffmpeg` pip package (~60MB wheel).
+- `imageio_ffmpeg.get_ffmpeg_exe()` returns the path to the bundled binary.
+- All subprocess calls use this path instead of assuming `ffmpeg` is in PATH.
+- `imageio-ffmpeg` does NOT bundle `ffprobe`. We derive the `ffprobe` path from the `ffmpeg` path (they are in the same directory in the bundled wheel).
+- Startup check is kept as a safety net, but should always pass since FFmpeg is pip-installed.
 
 ## Files to Create/Modify
 
@@ -100,7 +102,7 @@ No ML predictor changes (predictor is image-only, used for logging).
 - `squishfile/compressor/engine.py` — add video/audio dispatch
 - `squishfile/routes/upload.py` — size limit, duration extraction
 - `squishfile/main.py` — FFmpeg check on startup
-- `pyproject.toml` — no new Python deps (FFmpeg is system-level)
+- `pyproject.toml` — add `imageio-ffmpeg>=0.5.1` dependency
 - `frontend/src/App.tsx` — FileEntry type update
 - `frontend/src/components/DropZone.tsx` — accept new types
 - `frontend/src/components/SizeControl.tsx` — dynamic presets

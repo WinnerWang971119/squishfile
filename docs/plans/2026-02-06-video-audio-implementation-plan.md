@@ -2,11 +2,39 @@
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
-**Goal:** Add video (MP4, WebM, MOV) and audio (MP3, WAV) compression to SquishFile using FFmpeg.
+**Goal:** Add video (MP4, WebM, MOV) and audio (MP3, WAV) compression to SquishFile using FFmpeg, bundled via `imageio-ffmpeg` (zero system dependencies).
 
-**Architecture:** Extend the existing function-based compressor pattern with two new modules (`video.py`, `audio.py`) that shell out to FFmpeg via `subprocess`. Wire them through the detector → engine → API pipeline following the same duck-typed dict return pattern.
+**Architecture:** Extend the existing function-based compressor pattern with two new modules (`video.py`, `audio.py`) that shell out to the FFmpeg binary provided by `imageio-ffmpeg` via `subprocess`. Wire them through the detector → engine → API pipeline following the same duck-typed dict return pattern.
 
-**Tech Stack:** FFmpeg (system binary), Python subprocess, existing FastAPI + React stack.
+**Tech Stack:** `imageio-ffmpeg` (pip-bundled FFmpeg binary), Python subprocess, existing FastAPI + React stack.
+
+---
+
+### Task 0: Add imageio-ffmpeg Dependency
+
+**Files:**
+- Modify: `pyproject.toml`
+
+**Step 1: Add `imageio-ffmpeg` to dependencies in `pyproject.toml`**
+
+Add `"imageio-ffmpeg>=0.5.1"` to the `dependencies` list.
+
+**Step 2: Install**
+
+Run: `pip install -e .`
+Expected: `imageio-ffmpeg` installs, bundling a static FFmpeg binary (~60MB).
+
+**Step 3: Verify FFmpeg binary is accessible**
+
+Run: `python -c "import imageio_ffmpeg; print(imageio_ffmpeg.get_ffmpeg_exe())"`
+Expected: Prints a path to the bundled ffmpeg binary.
+
+**Step 4: Commit**
+
+```bash
+git add pyproject.toml
+git commit -m "feat: add imageio-ffmpeg dependency for bundled FFmpeg binary"
+```
 
 ---
 
@@ -23,12 +51,26 @@ Create `tests/test_ffmpeg_utils.py`:
 ```python
 """Tests for FFmpeg utility functions."""
 import pytest
-from squishfile.compressor.ffmpeg_utils import check_ffmpeg, probe_media
+from squishfile.compressor.ffmpeg_utils import check_ffmpeg, get_ffmpeg, get_ffprobe, probe_media
 
 
 def test_check_ffmpeg():
-    """FFmpeg should be available on this system."""
+    """FFmpeg should be available via imageio-ffmpeg."""
     assert check_ffmpeg() is True
+
+
+def test_get_ffmpeg_returns_path():
+    """get_ffmpeg should return a valid path string."""
+    path = get_ffmpeg()
+    assert path is not None
+    assert len(path) > 0
+
+
+def test_get_ffprobe_returns_path():
+    """get_ffprobe should return a valid path string."""
+    path = get_ffprobe()
+    assert path is not None
+    assert len(path) > 0
 
 
 def test_probe_media_with_invalid_data():
@@ -47,40 +89,90 @@ Expected: FAIL with `ModuleNotFoundError`
 Create `squishfile/compressor/ffmpeg_utils.py`:
 
 ```python
-"""FFmpeg utility functions for probing and checking availability."""
+"""FFmpeg utility functions using imageio-ffmpeg bundled binary."""
 import json
-import shutil
+import os
 import subprocess
 import tempfile
-import os
+
+import imageio_ffmpeg
+
+
+def get_ffmpeg() -> str:
+    """Return path to the FFmpeg binary (bundled via imageio-ffmpeg)."""
+    return imageio_ffmpeg.get_ffmpeg_exe()
+
+
+def get_ffprobe() -> str:
+    """Return path to the FFprobe binary (derived from FFmpeg location).
+
+    imageio-ffmpeg only bundles ffmpeg, not ffprobe. However, the static
+    builds typically include ffprobe alongside ffmpeg. We derive the path
+    by replacing 'ffmpeg' with 'ffprobe' in the binary path. If ffprobe
+    is not found, we fall back to using 'ffmpeg -i' for probing.
+    """
+    ffmpeg_path = get_ffmpeg()
+    ffprobe_path = ffmpeg_path.replace("ffmpeg", "ffprobe")
+    if os.path.isfile(ffprobe_path):
+        return ffprobe_path
+    # Fallback: use system ffprobe if available
+    import shutil
+    sys_ffprobe = shutil.which("ffprobe")
+    if sys_ffprobe:
+        return sys_ffprobe
+    # Last resort: return None, probe_media will use ffmpeg -i instead
+    return None
 
 
 def check_ffmpeg() -> bool:
-    """Return True if ffmpeg and ffprobe are available in PATH."""
-    return shutil.which("ffmpeg") is not None and shutil.which("ffprobe") is not None
+    """Return True if FFmpeg is available via imageio-ffmpeg."""
+    try:
+        path = get_ffmpeg()
+        return path is not None and os.path.isfile(path)
+    except Exception:
+        return False
 
 
 def probe_media(data: bytes) -> dict | None:
-    """Probe media file bytes using ffprobe. Returns dict with duration, streams info, or None on failure."""
+    """Probe media file bytes. Returns dict with duration, streams info, or None on failure."""
     tmp_fd, tmp_path = tempfile.mkstemp()
     try:
         os.write(tmp_fd, data)
         os.close(tmp_fd)
 
+        ffprobe = get_ffprobe()
+        if ffprobe:
+            result = subprocess.run(
+                [
+                    ffprobe, "-v", "quiet",
+                    "-print_format", "json",
+                    "-show_format", "-show_streams",
+                    tmp_path,
+                ],
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
+            if result.returncode == 0:
+                return json.loads(result.stdout)
+
+        # Fallback: parse duration from ffmpeg stderr
+        ffmpeg = get_ffmpeg()
         result = subprocess.run(
-            [
-                "ffprobe", "-v", "quiet",
-                "-print_format", "json",
-                "-show_format", "-show_streams",
-                tmp_path,
-            ],
+            [ffmpeg, "-i", tmp_path],
             capture_output=True,
             text=True,
             timeout=30,
         )
-        if result.returncode != 0:
-            return None
-        return json.loads(result.stdout)
+        # ffmpeg -i exits with error but prints info to stderr
+        import re
+        stderr = result.stderr
+        duration_match = re.search(r"Duration:\s*(\d+):(\d+):(\d+)\.(\d+)", stderr)
+        if duration_match:
+            h, m, s, _ = duration_match.groups()
+            duration = int(h) * 3600 + int(m) * 60 + int(s)
+            return {"format": {"duration": str(duration)}, "streams": []}
+        return None
     except (subprocess.TimeoutExpired, json.JSONDecodeError, OSError):
         return None
     finally:
@@ -91,13 +183,13 @@ def probe_media(data: bytes) -> dict | None:
 **Step 4: Run tests to verify they pass**
 
 Run: `pytest tests/test_ffmpeg_utils.py -v`
-Expected: PASS (assuming FFmpeg is installed)
+Expected: PASS
 
 **Step 5: Commit**
 
 ```bash
 git add squishfile/compressor/ffmpeg_utils.py tests/test_ffmpeg_utils.py
-git commit -m "feat: add FFmpeg utility module with probe and availability check"
+git commit -m "feat: add FFmpeg utility module using imageio-ffmpeg bundled binary"
 ```
 
 ---
@@ -307,12 +399,12 @@ Expected: FAIL with `ModuleNotFoundError`
 Create `squishfile/compressor/audio.py`:
 
 ```python
-"""Audio compression using FFmpeg."""
+"""Audio compression using FFmpeg (via imageio-ffmpeg)."""
 import os
 import subprocess
 import tempfile
 
-from squishfile.compressor.ffmpeg_utils import probe_media
+from squishfile.compressor.ffmpeg_utils import get_ffmpeg, probe_media
 
 
 def compress_audio(data: bytes, mime: str, target_size: int) -> dict:
@@ -355,7 +447,7 @@ def compress_audio(data: bytes, mime: str, target_size: int) -> dict:
         os.close(out_fd)
 
         cmd = [
-            "ffmpeg", "-y", "-i", in_path,
+            get_ffmpeg(), "-y", "-i", in_path,
             "-c:a", "libmp3lame",
             "-b:a", f"{target_bitrate_kbps}k",
             out_path,
@@ -429,12 +521,13 @@ from squishfile.compressor.video import compress_video
 
 
 def _make_test_video(duration=2, width=320, height=240) -> bytes:
-    """Generate a minimal test video using FFmpeg."""
+    """Generate a minimal test video using FFmpeg (via imageio-ffmpeg)."""
+    from squishfile.compressor.ffmpeg_utils import get_ffmpeg
     out_fd, out_path = tempfile.mkstemp(suffix=".mp4")
     os.close(out_fd)
     try:
         cmd = [
-            "ffmpeg", "-y",
+            get_ffmpeg(), "-y",
             "-f", "lavfi", "-i", f"testsrc=duration={duration}:size={width}x{height}:rate=24",
             "-f", "lavfi", "-i", f"sine=frequency=440:duration={duration}",
             "-c:v", "libx264", "-preset", "ultrafast",
@@ -478,12 +571,12 @@ Expected: FAIL with `ModuleNotFoundError`
 Create `squishfile/compressor/video.py`:
 
 ```python
-"""Video compression using FFmpeg two-pass encoding."""
+"""Video compression using FFmpeg two-pass encoding (via imageio-ffmpeg)."""
 import os
 import subprocess
 import tempfile
 
-from squishfile.compressor.ffmpeg_utils import probe_media
+from squishfile.compressor.ffmpeg_utils import get_ffmpeg, probe_media
 
 # Minimum video bitrate before we try downscaling
 MIN_BITRATE_KBPS = 100
@@ -564,7 +657,7 @@ def compress_video(data: bytes, mime: str, target_size: int) -> dict:
 
         # Pass 1
         cmd_pass1 = [
-            "ffmpeg", "-y", "-i", in_path,
+            get_ffmpeg(), "-y", "-i", in_path,
             "-c:v", "libx264", "-preset", "medium",
             "-b:v", f"{video_bitrate_kbps}k",
             *vf,
@@ -584,7 +677,7 @@ def compress_video(data: bytes, mime: str, target_size: int) -> dict:
 
         # Pass 2
         cmd_pass2 = [
-            "ffmpeg", "-y", "-i", in_path,
+            get_ffmpeg(), "-y", "-i", in_path,
             "-c:v", "libx264", "-preset", "medium",
             "-b:v", f"{video_bitrate_kbps}k",
             *vf,
@@ -798,9 +891,10 @@ Append to `tests/test_upload.py` (read existing file first to understand the tes
 def test_upload_video_returns_duration(tmp_path):
     """Uploading a video should return duration instead of width/height."""
     import subprocess, os
+    from squishfile.compressor.ffmpeg_utils import get_ffmpeg
     video_path = str(tmp_path / "test.mp4")
     subprocess.run([
-        "ffmpeg", "-y",
+        get_ffmpeg(), "-y",
         "-f", "lavfi", "-i", "testsrc=duration=1:size=160x120:rate=15",
         "-c:v", "libx264", "-preset", "ultrafast",
         video_path,
@@ -927,8 +1021,8 @@ app = FastAPI(title="SquishFile", version=__version__)
 
 if not check_ffmpeg():
     logger.warning(
-        "FFmpeg not found in PATH. Video and audio compression will not work. "
-        "Install FFmpeg: https://ffmpeg.org/download.html"
+        "FFmpeg not available. Video and audio compression will not work. "
+        "Try reinstalling: pip install imageio-ffmpeg"
     )
 
 app.add_middleware(
