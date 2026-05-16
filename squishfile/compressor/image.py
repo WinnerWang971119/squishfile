@@ -8,6 +8,7 @@ def compress_image(
     data: bytes,
     mime: str,
     target_size: int,
+    allow_resize: bool = True,
 ) -> dict:
     original_size = len(data)
 
@@ -15,21 +16,22 @@ def compress_image(
         return {"data": data, "size": original_size, "skipped": True}
 
     if mime in QUALITY_FORMATS:
-        return _compress_with_quality(data, mime, target_size)
+        return _compress_with_quality(data, mime, target_size, allow_resize)
 
     if mime == "image/png":
-        return _compress_png(data, target_size)
+        return _compress_png(data, target_size, allow_resize)
 
     if mime == "image/gif":
-        return _compress_gif(data, target_size)
+        return _compress_gif(data, target_size, allow_resize)
 
     # Fallback: return original
     return {"data": data, "size": original_size, "skipped": True}
 
 
 def _compress_with_quality(
-    data: bytes, mime: str, target_size: int
+    data: bytes, mime: str, target_size: int, allow_resize: bool
 ) -> dict:
+    original_size = len(data)
     fmt = "JPEG" if mime == "image/jpeg" else "WEBP"
     img = Image.open(io.BytesIO(data))
 
@@ -69,8 +71,11 @@ def _compress_with_quality(
         quality = (lo + hi) // 2
 
     # Fallback: reduce resolution if quality alone isn't enough
-    if best_data is None or best_size > target_size * 1.05:
+    if allow_resize and (best_data is None or best_size > target_size * 1.05):
         return _compress_with_resize(img, fmt, target_size)
+
+    if best_data is None:
+        return {"data": data, "size": original_size, "skipped": True}
 
     return {"data": best_data, "size": best_size, "skipped": False}
 
@@ -96,7 +101,7 @@ def _compress_with_resize(
     return {"data": buf.getvalue(), "size": buf.tell(), "skipped": False}
 
 
-def _compress_png(data: bytes, target_size: int) -> dict:
+def _compress_png(data: bytes, target_size: int, allow_resize: bool) -> dict:
     img = Image.open(io.BytesIO(data))
 
     # Try converting to JPEG (lossy) to hit target
@@ -108,16 +113,22 @@ def _compress_png(data: bytes, target_size: int) -> dict:
         img = img.convert("RGB")
 
     return _compress_with_quality(
-        _image_to_bytes(img, "JPEG", 95), "image/jpeg", target_size
+        _image_to_bytes(img, "JPEG", 95),
+        "image/jpeg",
+        target_size,
+        allow_resize,
     )
 
 
-def _compress_gif(data: bytes, target_size: int) -> dict:
+def _compress_gif(data: bytes, target_size: int, allow_resize: bool) -> dict:
     img = Image.open(io.BytesIO(data))
     # Convert first frame to JPEG
     rgb = img.convert("RGB")
     return _compress_with_quality(
-        _image_to_bytes(rgb, "JPEG", 95), "image/jpeg", target_size
+        _image_to_bytes(rgb, "JPEG", 95),
+        "image/jpeg",
+        target_size,
+        allow_resize,
     )
 
 

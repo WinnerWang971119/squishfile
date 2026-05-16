@@ -25,7 +25,12 @@ def compress_pdf(data: bytes, target_size: int) -> dict:
                 img_mime = f"image/{img_ext}"
 
                 img_target = max(1024, int(len(img_data) * ratio))
-                compressed = compress_image(img_data, img_mime, img_target)
+                compressed = compress_image(
+                    img_data,
+                    img_mime,
+                    img_target,
+                    allow_resize=False,
+                )
 
                 if not compressed["skipped"]:
                     # Replace image in PDF using page.replace_image
