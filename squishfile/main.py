@@ -1,7 +1,7 @@
 import os
 import logging
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -38,13 +38,19 @@ async def health_check():
 
 
 FRONTEND_DIR = os.path.join(os.path.dirname(__file__), "frontend", "dist")
+FRONTEND_INDEX = os.path.join(FRONTEND_DIR, "index.html")
+FRONTEND_ASSETS_DIR = os.path.join(FRONTEND_DIR, "assets")
 
-if os.path.exists(FRONTEND_DIR):
-    app.mount("/assets", StaticFiles(directory=os.path.join(FRONTEND_DIR, "assets")), name="assets")
+if os.path.isdir(FRONTEND_ASSETS_DIR):
+    app.mount("/assets", StaticFiles(directory=FRONTEND_ASSETS_DIR), name="assets")
 
+if os.path.isfile(FRONTEND_INDEX):
     @app.get("/{path:path}")
     async def serve_frontend(path: str):
+        if path == "api" or path.startswith("api/"):
+            raise HTTPException(status_code=404, detail="Not Found")
+
         file_path = os.path.join(FRONTEND_DIR, path)
         if os.path.isfile(file_path):
             return FileResponse(file_path)
-        return FileResponse(os.path.join(FRONTEND_DIR, "index.html"))
+        return FileResponse(FRONTEND_INDEX)
