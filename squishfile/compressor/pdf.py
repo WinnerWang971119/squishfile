@@ -41,6 +41,14 @@ def compress_pdf(data: bytes, target_size: int) -> dict:
     result_bytes = doc.tobytes(deflate=True, garbage=4)
     doc.close()
 
+    if len(result_bytes) >= original_size:
+        return {
+            "data": data,
+            "size": original_size,
+            "skipped": True,
+            "message": "Could not make PDF smaller; keeping original file.",
+        }
+
     return {
         "data": result_bytes,
         "size": len(result_bytes),

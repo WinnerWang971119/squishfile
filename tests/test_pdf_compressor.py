@@ -64,6 +64,25 @@ def test_skip_small_pdf():
     assert result["skipped"] is True
 
 
+def test_discard_pdf_rewrite_when_not_smaller():
+    doc = fitz.open()
+    page = doc.new_page()
+    img = Image.new("RGB", (1, 1), color="white")
+    img_buf = io.BytesIO()
+    img.save(img_buf, format="PNG", optimize=True)
+    page.insert_image(fitz.Rect(72, 72, 73, 73), stream=img_buf.getvalue())
+    for i in range(40):
+        page.insert_text((72, 100 + i * 14), "hello world " * 20, fontsize=10)
+    original = doc.tobytes(deflate=True)
+    doc.close()
+
+    result = compress_pdf(original, len(original) - 1)
+
+    assert result["skipped"] is True
+    assert result["size"] == len(original)
+    assert result["data"] == original
+
+
 def test_compress_pdf_preserves_background_image_size_for_text_overlay():
     original = _make_test_pdf_with_background_and_text()
     result = compress_pdf(original, len(original) // 2)
