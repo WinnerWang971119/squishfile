@@ -27,6 +27,10 @@ jobs:
         with:
           node-version: '20'
 
+      - name: Pin setuptools-scm version to tag
+        shell: bash
+        run: echo "SETUPTOOLS_SCM_PRETEND_VERSION_FOR_SQUISHFILE=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
+
       - name: Install Python dependencies
         run: |
           pip install .
@@ -80,6 +84,9 @@ jobs:
         run: |
           npm ci
           npm run build
+
+      - name: Pin setuptools-scm version to tag
+        run: echo "SETUPTOOLS_SCM_PRETEND_VERSION_FOR_SQUISHFILE=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
 
       - name: Build package
         run: |
