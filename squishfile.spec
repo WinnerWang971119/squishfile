@@ -1,5 +1,6 @@
 # -*- mode: python ; coding: utf-8 -*-
 import os
+from PyInstaller.utils.hooks import copy_metadata
 
 block_cipher = None
 
@@ -12,7 +13,7 @@ a = Analysis(
     datas=[
         ('squishfile/frontend/dist', 'squishfile/frontend/dist'),
         ('squishfile/models', 'squishfile/models'),
-    ],
+    ] + copy_metadata('squishfile'),
     hiddenimports=[
         'squishfile',
         'squishfile.main',
