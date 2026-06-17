@@ -13,22 +13,34 @@ jobs:
     name: Build Windows EXE
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.12'
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: '20'
 
       - name: Install Python dependencies
         run: |
-          pip install -e .
+          pip install .
           pip install pyinstaller
+
+      - name: Verify resolved version matches tag (EXE)
+        shell: bash
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          BUILT=$(python -c "import squishfile; print(squishfile.__version__)")
+          echo "tag=$TAG resolved=$BUILT"
+          if [ "$TAG" != "$BUILT" ]; then
+            echo "::error::EXE build resolved version $BUILT != tag $TAG"; exit 1
+          fi
 
       - name: Build frontend
         working-directory: frontend
@@ -49,15 +61,17 @@ jobs:
     name: Publish to PyPI
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.12'
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: '20'
 
@@ -70,20 +84,35 @@ jobs:
       - name: Build package
         run: |
           pip install build twine
-          python -m build
+          python -m build --wheel
+
+      - name: Verify built version matches tag
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          WHEEL=$(ls dist/*.whl)
+          BUILT=$(basename "$WHEEL" | sed -E 's/^squishfile-([^-]+)-.*/\1/')
+          echo "tag=$TAG built=$BUILT"
+          if [ "$TAG" != "$BUILT" ]; then
+            echo "::error::Built version $BUILT does not match tag $TAG"; exit 1
+          fi
+
+      - name: Verify wheel bundles frontend
+        run: |
+          python -m zipfile -l dist/*.whl | grep -q "squishfile/frontend/dist/index.html" \
+            || { echo "::error::wheel is missing squishfile/frontend/dist"; exit 1; }
 
       - name: Publish to PyPI
         env:
           TWINE_USERNAME: __token__
           TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
-        run: twine upload dist/*
+        run: twine upload --skip-existing dist/*
 
   create-release:
     name: Create GitHub Release
     needs: build-exe
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Download EXE artifact
         uses: actions/download-artifact@v4
